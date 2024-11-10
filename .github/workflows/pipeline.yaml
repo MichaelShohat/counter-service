@@ -66,5 +66,6 @@ jobs:
 
     - name: Deploy to EKS
       run: |
+        kubectl delete pod -l app=counter-service
         kubectl apply -f k8s/deployment.yaml
         kubectl apply -f k8s/service.yaml
