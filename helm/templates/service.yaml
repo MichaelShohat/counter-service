@@ -12,3 +12,5 @@ spec:
       protocol: TCP
   selector:
     {{- include "counter-service.selectorLabels" . | nindent 4 }}
+
+    
