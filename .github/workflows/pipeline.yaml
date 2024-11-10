@@ -1,0 +1,62 @@
+# This workflow will build a docker image running a python application and will upload the image to an ECR repository,
+# and then deploy it to a kubernetes cluster
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Python CI/CD with docker build
+
+on:
+  workflow_dispatch: 
+  push:
+    branches: [ "main"]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-west-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Get current date
+      id: date
+      run: echo "DATE=$(date +'%d-%m-%Y')" >> $GITHUB_ENV
+
+    - name: Get branch name and commit id and set it as env vars
+      run: |
+        echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+        echo "SHA_SHORT=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+      
+    - name: Print branch name, hash and date
+      run: |
+        echo "$GIT_BRANCH"
+        echo "$SHA_SHORT"
+        echo "$DATE"
+        
+    - name: Build, tag and push image to ECR registry
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ secrets.REPO_NAME }}
+        IMAGE_TAG: "${{  env.GIT_BRANCH  }}-${{  env.SHA_SHORT  }}-${{ env.DATE }}"
+      id: build-tag-push
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
