@@ -72,6 +72,7 @@ jobs:
 
     - name: install helm
       uses: azure/setup-helm@v4.2.0
+      continue-on-error: true
 
     - name: Helm uninstall and install
       run: |
