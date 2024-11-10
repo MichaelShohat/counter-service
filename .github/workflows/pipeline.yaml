@@ -23,11 +23,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%d-%m-%Y')"
+
     - name: Set next patch version
-      run: echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+      run: |
+        echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+        echo "SHA_SHORT=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
       
-    - name: Print branch name
-      run: echo "$GIT_BRANCH"
+    - name: Print branch name, hash and date
+      run: |
+        echo "$GIT_BRANCH"
+        echo "$SHA_SHORT"
+        echo ${{ steps.date.outputs.date }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
@@ -49,7 +58,7 @@ jobs:
         file: Dockerfile
         context: .
         tags: |
-          "counter-service:${{  env.GIT_BRANCH  }}"
+          "counter-service:${{  env.GIT_BRANCH  }}-${{  env.SHA_SHORT  }}-${{ steps.date.outputs.date }}"
         labels: ${{ steps.meta.outputs.labels }}
         
         
